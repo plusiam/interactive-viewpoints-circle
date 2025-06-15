@@ -51,6 +51,12 @@
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
         
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
         .btn-secondary {
             background: white;
             color: var(--primary-color);
@@ -146,8 +152,13 @@
             justify-content: center;
         }
         
-        .spin-button:hover {
+        .spin-button:hover:not(:disabled) {
             transform: translate(-50%, -50%) scale(1.1);
+        }
+        
+        .spin-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
         }
         
         .pointer {
@@ -176,11 +187,81 @@
             padding: 20px;
         }
         
+        /* 프린트 스타일 */
+        @media print {
+            body {
+                background: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        
         @media (max-width: 768px) {
             .wheel-container {
                 width: 320px;
                 height: 320px;
             }
+        }
+        
+        /* 애니메이션 효과 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        /* 진행 표시기 */
+        .progress-indicator {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transition: width 0.3s ease;
+        }
+        
+        /* 도움말 툴팁 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
 </head>
@@ -192,9 +273,22 @@
             <p class="text-sm text-gray-500 mt-1">하버드대학교 프로젝트 제로 - 보이는 사고(Visible Thinking) 루틴</p>
         </header>
 
-        <div class="flex justify-end gap-2 mb-4">
-            <button onclick="saveResult()" class="btn-secondary px-4 py-2 rounded-full font-semibold text-sm">🖼️ 결과 저장</button>
+        <div class="flex justify-end gap-2 mb-4 no-print">
+            <button onclick="showHelp()" class="btn-secondary px-4 py-2 rounded-full font-semibold text-sm">❓ 도움말</button>
+            <button onclick="shareLink()" class="btn-secondary px-4 py-2 rounded-full font-semibold text-sm">🔗 공유</button>
+            <button onclick="saveResult()" class="btn-secondary px-4 py-2 rounded-full font-semibold text-sm">📄 탐구결과 저장</button>
             <button onclick="resetAll()" class="btn-secondary px-4 py-2 rounded-full font-semibold text-sm">🔄 새로 시작</button>
+        </div>
+
+        <!-- 진행 상황 표시 -->
+        <div class="progress-indicator mb-6">
+            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                <span>진행률</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+            </div>
         </div>
 
         <div class="grid lg:grid-cols-5 gap-6">
@@ -213,7 +307,13 @@
                             <input type="text" id="studentName" class="custom-input w-full px-4 py-2 rounded-lg" placeholder="홍길동">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">중심 주제</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                중심 주제
+                                <span class="tooltip">
+                                    <span class="text-gray-400 text-xs ml-1">ⓘ</span>
+                                    <span class="tooltiptext">탐구하고 싶은 주제나 질문을 입력하세요</span>
+                                </span>
+                            </label>
                             <input type="text" id="mainTopic" class="custom-input w-full px-4 py-2 rounded-lg" placeholder="예: 지구 온난화">
                         </div>
                     </div>
@@ -222,16 +322,33 @@
                 <div>
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                         <span class="text-2xl mr-2">🎡</span>관점 추가
+                        <span class="tooltip ml-2">
+                            <span class="text-gray-400 text-xs">ⓘ</span>
+                            <span class="tooltiptext">다양한 입장이나 역할을 추가해보세요 (예: 과학자, 학생, 지구)</span>
+                        </span>
                     </h2>
                     <div class="flex gap-2 mb-2">
                         <input type="text" id="viewpointInput" class="custom-input flex-1 px-4 py-2 rounded-lg" placeholder="관점 입력 (예: 과학자, 지구)">
                         <button onclick="addViewpoint()" class="btn-primary px-6 py-2 rounded-lg font-medium">추가</button>
                     </div>
+                    
+                    <!-- 추천 관점 -->
+                    <div id="suggestedViewpoints" class="mb-3 hidden">
+                        <p class="text-xs text-gray-500 mb-1">추천 관점:</p>
+                        <div id="suggestions" class="flex flex-wrap gap-1"></div>
+                    </div>
+                    
                     <div id="viewpointList" class="space-y-2 max-h-40 overflow-y-auto pr-2"></div>
-                    <p class="text-sm text-gray-500 mt-2">💡 최대 12개까지 추가 가능합니다</p>
-                    <button onclick="showExplorationPanel()" class="btn-secondary w-full py-2 rounded-lg font-medium mt-4">
-                        ✍️ 탐구 시작하기
-                    </button>
+                    <p class="text-sm text-gray-500 mt-2">💡 최대 12개까지 추가 가능합니다 (<span id="viewpointCount">0</span>/12)</p>
+                    
+                    <div class="mt-4 space-y-2">
+                        <button onclick="showExplorationPanel()" class="btn-secondary w-full py-2 rounded-lg font-medium">
+                            ✍️ 탐구 시작하기
+                        </button>
+                        <button onclick="randomViewpoints()" class="btn-secondary w-full py-2 rounded-lg font-medium">
+                            🎲 무작위 관점 생성
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -239,20 +356,117 @@
                 <div class="wheel-container">
                     <div class="pointer"></div>
                     <div id="wheel" class="wheel empty-wheel">관점을 추가해주세요</div>
-                    <button id="spinButton" class="spin-button" onclick="spinWheel()" style="display: none;">SPIN</button>
+                    <button id="spinButton" class="spin-button" onclick="spinWheel()" style="display: none;" disabled>SPIN</button>
                 </div>
                 <p class="text-center mt-4 text-gray-600 text-sm">
                     🎡 SPIN 버튼을 누르거나 원하는 관점을 직접 클릭하세요!<br>
                     <span class="text-gray-500">또는 왼쪽 '탐구 시작하기' 버튼으로 원하는 관점을 직접 선택할 수 있습니다.</span>
                 </p>
+                
+                <!-- 탐구 통계 -->
+                <div id="stats" class="mt-4 text-center hidden">
+                    <p class="text-sm text-gray-600">
+                        탐구 완료: <span id="completedCount" class="font-bold text-purple-600">0</span> / 
+                        <span id="totalViewpoints" class="font-bold">0</span> 관점
+                    </p>
+                </div>
             </div>
         </div>
 
-        <div id="explorationPanel" class="mt-6 panel p-6 hidden"></div>
+        <div id="explorationPanel" class="mt-6 panel p-6 hidden fade-in"></div>
         
         <div id="savedExplorations" class="mt-6 panel p-6 hidden">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">📊 탐구 기록</h3>
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-bold text-gray-800">📊 탐구 기록</h3>
+                <div class="flex gap-2">
+                    <select id="sortOrder" onchange="updateExplorationList()" class="custom-input px-3 py-1 rounded text-sm">
+                        <option value="recent">최신순</option>
+                        <option value="viewpoint">관점순</option>
+                    </select>
+                    <button onclick="printExplorations()" class="btn-secondary px-3 py-1 rounded text-sm">🖨️ 인쇄</button>
+                </div>
+            </div>
             <div id="explorationList" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <!-- 도움말 모달 -->
+    <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-lg p-6 max-w-2xl max-h-[80vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4">📖 사용 방법</h2>
+            <div class="space-y-4 text-sm">
+                <div>
+                    <h3 class="font-bold text-lg mb-2">1. 학습 정보 입력</h3>
+                    <p>학반, 이름, 탐구할 중심 주제를 입력하세요.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">2. 관점 추가</h3>
+                    <p>주제와 관련된 다양한 관점을 추가하세요. 예를 들어 '지구 온난화' 주제라면 과학자, 정치인, 기업가, 학생, 지구 등의 관점을 추가할 수 있습니다.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">3. 관점 선택</h3>
+                    <p>SPIN 버튼을 눌러 무작위로 선택하거나, 원하는 관점을 직접 클릭하세요.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">4. 탐구하기</h3>
+                    <p>선택한 관점에서 다음 세 가지를 작성합니다:</p>
+                    <ul class="list-disc pl-5 mt-1">
+                        <li>나는 ~라고 생각한다 (관점의 입장)</li>
+                        <li>왜냐하면 ~이기 때문이다 (근거나 이유)</li>
+                        <li>나는 ~이 궁금하다 (질문이나 궁금증)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">5. 결과 저장</h3>
+                    <p>모든 탐구가 끝나면 '탐구결과 저장' 버튼으로 이미지를 다운로드할 수 있습니다.</p>
+                </div>
+            </div>
+            <button onclick="closeHelp()" class="btn-primary w-full mt-6 py-2 rounded-lg">닫기</button>
+        </div>
+    </div>
+
+    <!-- 인쇄/저장용 숨겨진 템플릿 -->
+    <div id="printTemplate" style="display: none; position: absolute; left: -9999px; width: 1200px; background: white; padding: 40px;">
+        <div style="max-width: 1000px; margin: 0 auto; font-family: 'Pretendard', sans-serif;">
+            <!-- 헤더 -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <h1 style="font-size: 36px; font-weight: bold; color: #1f2937; margin-bottom: 8px;">
+                    🎯 관점의 원 탐구 결과
+                </h1>
+                <p style="font-size: 18px; color: #6b7280;">Circle of Viewpoints - 탐구 기록</p>
+                <p style="font-size: 14px; color: #9ca3af; margin-top: 4px;">하버드대학교 프로젝트 제로 - 보이는 사고(Visible Thinking) 루틴</p>
+            </div>
+            
+            <!-- 학습 정보 -->
+            <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 32px; border: 1px solid #e5e7eb;">
+                <h2 style="font-size: 20px; font-weight: bold; color: #374151; margin-bottom: 16px;">📝 학습 정보</h2>
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 12px;">
+                    <div style="font-weight: 600; color: #6b7280;">학반:</div>
+                    <div id="printClass" style="color: #1f2937;"></div>
+                    <div style="font-weight: 600; color: #6b7280;">이름:</div>
+                    <div id="printName" style="color: #1f2937;"></div>
+                    <div style="font-weight: 600; color: #6b7280;">중심 주제:</div>
+                    <div id="printTopic" style="color: #1f2937; font-weight: 600;"></div>
+                    <div style="font-weight: 600; color: #6b7280;">작성일:</div>
+                    <div id="printDate" style="color: #1f2937;"></div>
+                </div>
+            </div>
+            
+            <!-- 탐구 기록 -->
+            <div>
+                <h2 style="font-size: 20px; font-weight: bold; color: #374151; margin-bottom: 20px;">📊 탐구 기록</h2>
+                <div id="printExplorations" style="display: grid; gap: 20px;">
+                    <!-- 탐구 내용이 여기에 동적으로 추가됨 -->
+                </div>
+            </div>
+            
+            <!-- 탐구 통계 -->
+            <div style="margin-top: 32px; padding: 20px; background: #f3f4f6; border-radius: 12px; text-align: center;">
+                <p style="font-size: 16px; color: #4b5563;">
+                    총 <span id="printTotalViewpoints" style="font-weight: bold; color: #8b5cf6;">0</span>개의 관점 중 
+                    <span id="printCompletedCount" style="font-weight: bold; color: #10b981;">0</span>개 탐구 완료
+                </p>
+            </div>
         </div>
     </div>
 
@@ -267,18 +481,78 @@
             '#6366f1', '#14b8a6', '#84cc16', '#f97316', '#a855f7', '#0ea5e9'
         ];
         
+        // 관점 추천 목록
+        const viewpointSuggestions = {
+            '환경': ['과학자', '정치인', '기업가', '학생', '미래세대', '환경운동가', '지구', '동물'],
+            '역사': ['역사학자', '당시 사람들', '현대인', '정치인', '예술가', '일반 시민', '외국인'],
+            '과학': ['과학자', '학생', '일반인', '정부', '기업', '종교인', '철학자'],
+            '사회': ['정치인', '시민', '전문가', '청소년', '노인', '외국인', '미디어', '기업'],
+            '예술': ['예술가', '관람객', '비평가', '수집가', '학생', '일반인', '큐레이터'],
+            '기술': ['개발자', '사용자', '기업', '정부', '교육자', '노인', '청소년', '부모'],
+            '동물': ['북극곰', '해양거북', '꿀벌', '펭귄', '산호초', '나비', '고래', '새'],
+            '온난화': ['북극곰', '농부', '섬나라 주민', '미래세대', '과학자', '정치인', '기업가', '환경운동가']
+        };
+        
         // 초기화
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('viewpointInput').addEventListener('keypress', e => {
                 if (e.key === 'Enter') addViewpoint();
             });
+            
+            // 주제 입력시 추천 관점 표시
+            document.getElementById('mainTopic').addEventListener('input', (e) => {
+                showSuggestedViewpoints(e.target.value);
+                saveData();
+            });
+            
             loadData();
             
             // 자동 저장
             ['studentClass', 'studentName', 'mainTopic'].forEach(id => {
                 document.getElementById(id).addEventListener('input', saveData);
             });
+            
+            updateProgressBar();
         });
+
+        // 추천 관점 표시
+        function showSuggestedViewpoints(topic) {
+            if (!topic) {
+                document.getElementById('suggestedViewpoints').classList.add('hidden');
+                return;
+            }
+            
+            const suggestions = [];
+            Object.entries(viewpointSuggestions).forEach(([category, viewpointList]) => {
+                if (topic.toLowerCase().includes(category)) {
+                    suggestions.push(...viewpointList);
+                }
+            });
+            
+            if (suggestions.length > 0) {
+                const container = document.getElementById('suggestedViewpoints');
+                const suggestionsDiv = document.getElementById('suggestions');
+                
+                container.classList.remove('hidden');
+                suggestionsDiv.innerHTML = suggestions
+                    .filter(s => !viewpoints.some(v => v.name === s))
+                    .slice(0, 6)
+                    .map(s => `
+                        <button onclick="addSuggestedViewpoint('${s}')" 
+                                class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">
+                            + ${s}
+                        </button>
+                    `).join('');
+            } else {
+                document.getElementById('suggestedViewpoints').classList.add('hidden');
+            }
+        }
+        
+        // 추천 관점 추가
+        function addSuggestedViewpoint(name) {
+            document.getElementById('viewpointInput').value = name;
+            addViewpoint();
+        }
 
         // 관점 추가
         function addViewpoint() {
@@ -287,7 +561,7 @@
             
             if (name && viewpoints.length < 12) {
                 if (viewpoints.some(vp => vp.name === name)) {
-                    alert('이미 추가된 관점입니다.');
+                    showToast('이미 추가된 관점입니다.');
                     return;
                 }
                 
@@ -298,18 +572,59 @@
                 
                 input.value = '';
                 updateUI();
+                showToast(`'${name}' 관점이 추가되었습니다.`);
             } else if (viewpoints.length >= 12) {
-                alert('최대 12개까지만 추가할 수 있습니다.');
+                showToast('최대 12개까지만 추가할 수 있습니다.');
             }
+        }
+
+        // 무작위 관점 생성
+        function randomViewpoints() {
+            const allSuggestions = Object.values(viewpointSuggestions).flat();
+            const uniqueSuggestions = [...new Set(allSuggestions)];
+            const shuffled = uniqueSuggestions.sort(() => 0.5 - Math.random());
+            const toAdd = Math.min(5, 12 - viewpoints.length);
+            
+            let addedCount = 0;
+            for (let i = 0; i < shuffled.length && addedCount < toAdd; i++) {
+                if (!viewpoints.some(vp => vp.name === shuffled[i])) {
+                    viewpoints.push({
+                        name: shuffled[i],
+                        color: colors[viewpoints.length % colors.length]
+                    });
+                    addedCount++;
+                }
+            }
+            
+            updateUI();
+            showToast(`${addedCount}개의 관점이 추가되었습니다.`);
+        }
+
+        // 토스트 메시지
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 fade-in';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
 
         // 관점 제거
         function removeViewpoint(index) {
+            const viewpointName = viewpoints[index].name;
             viewpoints.splice(index, 1);
+            
             // 색상 재배정
             viewpoints.forEach((vp, i) => {
                 vp.color = colors[i % colors.length];
             });
+            
+            // 관련 탐구 기록도 제거
+            savedExplorations = savedExplorations.filter(exp => exp.viewpoint.name !== viewpointName);
+            
             updateUI();
         }
         
@@ -318,264 +633,291 @@
             updateViewpointList();
             updateWheel();
             updateExplorationList();
+            updateProgressBar();
+            updateStats();
             saveData();
+        }
+
+        // 진행률 업데이트
+        function updateProgressBar() {
+            const totalSteps = 3 + viewpoints.length; // 학습정보 3개 + 관점 수
+            const completedSteps = 
+                (document.getElementById('studentClass').value ? 1 : 0) +
+                (document.getElementById('studentName').value ? 1 : 0) +
+                (document.getElementById('mainTopic').value ? 1 : 0) +
+                savedExplorations.length;
+            
+            const progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+            
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressText').textContent = `${progress}%`;
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            if (viewpoints.length > 0) {
+                document.getElementById('stats').classList.remove('hidden');
+                document.getElementById('completedCount').textContent = savedExplorations.length;
+                document.getElementById('totalViewpoints').textContent = viewpoints.length;
+            } else {
+                document.getElementById('stats').classList.add('hidden');
+            }
         }
 
         // 관점 목록 업데이트
         function updateViewpointList() {
             const list = document.getElementById('viewpointList');
-            list.innerHTML = viewpoints.map((vp, index) => `
-                <div class="viewpoint-item flex justify-between items-center p-2 rounded-lg">
-                    <div class="flex items-center gap-3">
-                        <div class="w-5 h-5 rounded-full" style="background-color: ${vp.color};"></div>
-                        <span class="font-medium text-gray-700">${vp.name}</span>
+            list.innerHTML = viewpoints.map((vp, i) => `
+                <div class="viewpoint-item flex items-center justify-between p-3 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-full" style="background: ${vp.color}"></div>
+                        <span class="font-medium">${vp.name}</span>
+                        ${savedExplorations.some(exp => exp.viewpoint.name === vp.name) ? 
+                            '<span class="text-xs text-green-600 ml-2">✓ 완료</span>' : ''}
                     </div>
-                    <button onclick="removeViewpoint(${index})" class="text-gray-400 hover:text-red-500 font-bold text-lg px-2">×</button>
+                    <button onclick="removeViewpoint(${i})" class="text-red-500 hover:text-red-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
             `).join('');
+            
+            document.getElementById('viewpointCount').textContent = viewpoints.length;
         }
 
-        // 원형 룰렛 업데이트
+        // 룰렛 업데이트
         function updateWheel() {
             const wheel = document.getElementById('wheel');
             const spinButton = document.getElementById('spinButton');
             
             if (viewpoints.length === 0) {
                 wheel.className = 'wheel empty-wheel';
-                wheel.style.background = '';
                 wheel.innerHTML = '관점을 추가해주세요';
                 spinButton.style.display = 'none';
                 return;
             }
             
-            wheel.className = 'wheel';
             spinButton.style.display = 'flex';
+            spinButton.disabled = false;
+            wheel.className = 'wheel';
             
-            // conic-gradient로 원 그리기
             const anglePerSection = 360 / viewpoints.length;
-            const gradientStops = [];
             
-            viewpoints.forEach((vp, i) => {
+            wheel.innerHTML = viewpoints.map((vp, i) => {
                 const startAngle = i * anglePerSection;
                 const endAngle = (i + 1) * anglePerSection;
-                gradientStops.push(`${vp.color} ${startAngle}deg ${endAngle}deg`);
-            });
+                
+                // SVG path for pie slice
+                const startAngleRad = (startAngle - 90) * Math.PI / 180;
+                const endAngleRad = (endAngle - 90) * Math.PI / 180;
+                
+                const x1 = 200 + 200 * Math.cos(startAngleRad);
+                const y1 = 200 + 200 * Math.sin(startAngleRad);
+                const x2 = 200 + 200 * Math.cos(endAngleRad);
+                const y2 = 200 + 200 * Math.sin(endAngleRad);
+                
+                const largeArcFlag = anglePerSection > 180 ? 1 : 0;
+                
+                const path = `M 200 200 L ${x1} ${y1} A 200 200 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+                
+                // Text position
+                const textAngle = (startAngle + endAngle) / 2;
+                const textAngleRad = (textAngle - 90) * Math.PI / 180;
+                const textRadius = 120;
+                const textX = 200 + textRadius * Math.cos(textAngleRad);
+                const textY = 200 + textRadius * Math.sin(textAngleRad);
+                
+                return `
+                    <svg class="wheel-section" viewBox="0 0 400 400" 
+                         style="transform: rotate(0deg);"
+                         onclick="selectViewpoint(${i})">
+                        <path d="${path}" fill="${vp.color}" stroke="white" stroke-width="3"/>
+                        <foreignObject x="${textX - 50}" y="${textY - 20}" width="100" height="40">
+                            <div class="section-text">${vp.name}</div>
+                        </foreignObject>
+                    </svg>
+                `;
+            }).join('');
             
-            wheel.style.background = `conic-gradient(from -90deg, ${gradientStops.join(', ')})`;
-            
-            // 텍스트와 클릭 영역 추가
-            wheel.innerHTML = '';
-            viewpoints.forEach((vp, index) => {
-                // 클릭 가능한 영역
-                const section = document.createElement('div');
-                section.className = 'wheel-section';
-                section.style.transform = `rotate(${anglePerSection * index}deg)`;
-                section.style.clipPath = `polygon(50% 50%, 50% 0, ${50 + 50 * Math.tan(anglePerSection * Math.PI / 180)}% 0)`;
-                section.onclick = () => selectViewpoint(index);
-                
-                // 텍스트
-                const textContainer = document.createElement('div');
-                textContainer.style.position = 'absolute';
-                textContainer.style.width = '100%';
-                textContainer.style.height = '100%';
-                
-                const text = document.createElement('div');
-                text.className = 'section-text';
-                const textAngle = anglePerSection * index + anglePerSection / 2 - 90;
-                const radius = 120;
-                const x = 50 + radius * Math.cos(textAngle * Math.PI / 180) / 2;
-                const y = 50 + radius * Math.sin(textAngle * Math.PI / 180) / 2;
-                text.style.left = `${x}%`;
-                text.style.top = `${y}%`;
-                text.style.transform = 'translate(-50%, -50%)';
-                text.textContent = vp.name;
-                
-                textContainer.appendChild(text);
-                wheel.appendChild(section);
-                wheel.appendChild(textContainer);
-            });
+            // Overlay for better visibility
+            wheel.innerHTML += '<div class="wheel-overlay"></div>';
         }
-        
-        // 관점 선택
+
+        // 룰렛 돌리기
+        function spinWheel() {
+            if (isSpinning || viewpoints.length === 0) return;
+            
+            isSpinning = true;
+            const spinButton = document.getElementById('spinButton');
+            spinButton.disabled = true;
+            
+            const wheel = document.getElementById('wheel');
+            const spins = 5 + Math.random() * 5;
+            const finalAngle = Math.random() * 360;
+            const totalRotation = spins * 360 + finalAngle;
+            
+            wheel.style.transform = `rotate(${totalRotation}deg)`;
+            
+            setTimeout(() => {
+                const anglePerSection = 360 / viewpoints.length;
+                const normalizedAngle = (360 - (finalAngle % 360) + 90) % 360;
+                const selectedIndex = Math.floor(normalizedAngle / anglePerSection) % viewpoints.length;
+                
+                currentViewpointIndex = selectedIndex;
+                showExplorationPanel();
+                
+                isSpinning = false;
+                spinButton.disabled = false;
+                wheel.style.transform = 'rotate(0deg)';
+            }, 5000);
+        }
+
+        // 관점 직접 선택
         function selectViewpoint(index) {
-            if (isSpinning) return;
-            currentViewpointIndex = index;
-            const viewpoint = viewpoints[index];
-            showExplorationPanel(viewpoint.name);
+            if (!isSpinning) {
+                currentViewpointIndex = index;
+                showExplorationPanel();
+            }
         }
-        
+
         // 탐구 패널 표시
-        function showExplorationPanel(viewpointName = '') {
+        function showExplorationPanel() {
+            if (viewpoints.length === 0) {
+                showToast('먼저 관점을 추가해주세요.');
+                return;
+            }
+            
             const panel = document.getElementById('explorationPanel');
             panel.classList.remove('hidden');
             
-            // 기존 저장된 내용 찾기
-            const existing = savedExplorations.find(e => e.viewpoint.name === viewpointName) || {};
-            
-            panel.innerHTML = `
-                <h2 class="text-xl font-bold text-gray-800 mb-4">
-                    <span class="text-2xl mr-2">🧠</span>관점 탐구하기
-                </h2>
-                <div class="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">탐구할 관점을 선택하거나 입력하세요:</label>
-                    <div class="flex gap-2">
-                        <select id="viewpointSelect" class="custom-input flex-1 px-4 py-2 rounded-lg" onchange="updateSelectedViewpoint()">
-                            <option value="">직접 입력...</option>
-                            ${viewpoints.map(vp => 
-                                `<option value="${vp.name}" ${vp.name === viewpointName ? 'selected' : ''}>${vp.name}</option>`
-                            ).join('')}
-                        </select>
-                        <input type="text" id="customViewpoint" class="custom-input flex-1 px-4 py-2 rounded-lg" 
-                               placeholder="새로운 관점 입력" value="${viewpointName}" onkeyup="updateViewpointDisplay()">
+            if (currentViewpointIndex === null) {
+                // 관점 선택 화면
+                panel.innerHTML = `
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🎯 탐구할 관점을 선택하세요</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        ${viewpoints.map((vp, i) => `
+                            <button onclick="startExploration(${i})" 
+                                    class="p-4 rounded-lg border-2 transition-all hover:shadow-md ${
+                                        savedExplorations.some(exp => exp.viewpoint.name === vp.name) 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-gray-300 hover:border-purple-500'
+                                    }">
+                                <div class="w-6 h-6 rounded-full mx-auto mb-2" style="background: ${vp.color}"></div>
+                                <div class="font-medium">${vp.name}</div>
+                                ${savedExplorations.some(exp => exp.viewpoint.name === vp.name) 
+                                    ? '<div class="text-xs text-green-600 mt-1">✓ 탐구 완료</div>' 
+                                    : '<div class="text-xs text-gray-500 mt-1">클릭하여 탐구</div>'}
+                            </button>
+                        `).join('')}
                     </div>
-                </div>
-                
-                <div id="explorationContent" class="space-y-4">
-                    <div class="text-center p-4 bg-gray-50 rounded-lg">
-                        <h3 class="text-lg font-bold text-gray-600 mb-2">
-                            <span id="currentViewpointDisplay" class="text-purple-700">${viewpointName || '관점을 선택하세요'}</span>의 입장에서
-                        </h3>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">1️⃣ 나는 ~라고 생각한다.</label>
-                        <textarea id="thinkText" rows="4" class="custom-input w-full p-3 rounded-lg resize-none" 
-                                  placeholder="이 관점에서 주제에 대해 어떻게 생각하는지 작성하세요...">${existing.think || ''}</textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">2️⃣ 왜냐하면 ~이기 때문이다.</label>
-                        <textarea id="becauseText" rows="4" class="custom-input w-full p-3 rounded-lg resize-none" 
-                                  placeholder="그렇게 생각하는 이유를 작성하세요...">${existing.because || ''}</textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">3️⃣ 나는 ~이 궁금하다.</label>
-                        <textarea id="wonderText" rows="3" class="custom-input w-full p-3 rounded-lg resize-none" 
-                                  placeholder="이 관점에서 궁금한 점이나 질문을 작성하세요...">${existing.wonder || ''}</textarea>
-                    </div>
-                </div>
-                <button onclick="saveExploration()" class="btn-primary w-full py-3 rounded-lg font-medium mt-6">💾 탐구 내용 저장</button>
-            `;
+                `;
+            } else {
+                startExploration(currentViewpointIndex);
+            }
             
             panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            updateViewpointDisplay();
-        }
-        
-        // 선택된 관점 업데이트
-        function updateSelectedViewpoint() {
-            const select = document.getElementById('viewpointSelect');
-            const customInput = document.getElementById('customViewpoint');
-            if (select.value === '') {
-                customInput.value = '';
-                customInput.focus();
-            } else {
-                customInput.value = select.value;
-            }
-            updateViewpointDisplay();
-        }
-        
-        // 관점 표시 업데이트
-        function updateViewpointDisplay() {
-            const customInput = document.getElementById('customViewpoint');
-            const display = document.getElementById('currentViewpointDisplay');
-            const currentViewpoint = customInput.value.trim();
-            display.textContent = currentViewpoint || '관점을 선택하세요';
         }
 
-        // 룰렛 회전
-        function spinWheel() {
-            if (isSpinning || viewpoints.length < 1) return;
-            isSpinning = true;
+        // 탐구 시작
+        function startExploration(index) {
+            currentViewpointIndex = index;
+            const viewpoint = viewpoints[index];
+            const existing = savedExplorations.find(exp => exp.viewpoint.name === viewpoint.name);
             
-            const wheel = document.getElementById('wheel');
-            const anglePerSection = 360 / viewpoints.length;
-            
-            // 현재 회전 각도 가져오기
-            const currentRotation = getCurrentRotation(wheel);
-            
-            // 무작위 선택
-            const randomIndex = Math.floor(Math.random() * viewpoints.length);
-            const targetAngle = anglePerSection * randomIndex + anglePerSection / 2;
-            
-            // 여러 바퀴 회전 추가
-            const extraRotations = 5 + Math.floor(Math.random() * 3);
-            const finalRotation = currentRotation + extraRotations * 360 + (360 - targetAngle);
-            
-            wheel.style.transform = `rotate(${finalRotation}deg)`;
-            
-            setTimeout(() => {
-                isSpinning = false;
-                selectViewpoint(randomIndex);
-            }, 5000);
-        }
-        
-        // 현재 회전 각도 가져오기
-        function getCurrentRotation(element) {
-            const transform = window.getComputedStyle(element).transform;
-            if (transform === 'none') return 0;
-            
-            const values = transform.match(/matrix\((.+)\)/)[1].split(', ');
-            const a = values[0];
-            const b = values[1];
-            let angle = Math.atan2(b, a) * (180 / Math.PI);
-            
-            return angle < 0 ? angle + 360 : angle;
+            const panel = document.getElementById('explorationPanel');
+            panel.innerHTML = `
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">
+                            <span class="inline-block w-4 h-4 rounded-full mr-2" style="background: ${viewpoint.color}"></span>
+                            ${viewpoint.name}의 관점에서 탐구하기
+                        </h3>
+                        <button onclick="closeExplorationPanel()" class="text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                나는 ~라고 생각한다 <span class="text-gray-500">(${viewpoint.name}의 입장)</span>
+                            </label>
+                            <textarea id="think" class="custom-input w-full px-4 py-2 rounded-lg h-20 resize-none" 
+                                      placeholder="예: 나는 북극곰에서 사는 북극곰이야. 나는 지구 온난화가 멈춰야 한다고 생각해.">${existing?.think || ''}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                왜냐하면 ~이기 때문이다 <span class="text-gray-500">(근거나 이유)</span>
+                            </label>
+                            <textarea id="reason" class="custom-input w-full px-4 py-2 rounded-lg h-20 resize-none" 
+                                      placeholder="예: 왜냐하면 얼음이 점점 녹아서 사냥하기 힘들고, 집도 없어지고 있기 때문이야.">${existing?.reason || ''}</textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                나는 ~이 궁금하다 <span class="text-gray-500">(질문이나 궁금증)</span>
+                            </label>
+                            <textarea id="question" class="custom-input w-full px-4 py-2 rounded-lg h-20 resize-none" 
+                                      placeholder="예: 나는 사람들이 우리가 사는 곳이 위험해지고 있다는 걸 알까가 궁금해.">${existing?.question || ''}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 mt-6">
+                        <button onclick="saveExploration()" class="btn-primary flex-1 py-2 rounded-lg font-medium">
+                            💾 ${existing ? '수정 완료' : '탐구 저장'}
+                        </button>
+                        <button onclick="closeExplorationPanel()" class="btn-secondary flex-1 py-2 rounded-lg font-medium">
+                            취소
+                        </button>
+                    </div>
+                </div>
+            `;
         }
 
-        // 탐구 내용 저장
+        // 탐구 저장
         function saveExploration() {
-            const customViewpoint = document.getElementById('customViewpoint').value.trim();
+            const viewpoint = viewpoints[currentViewpointIndex];
+            const think = document.getElementById('think').value.trim();
+            const reason = document.getElementById('reason').value.trim();
+            const question = document.getElementById('question').value.trim();
             
-            if (!customViewpoint) {
-                alert('탐구할 관점을 선택하거나 입력해주세요.');
+            if (!think || !reason || !question) {
+                showToast('모든 항목을 작성해주세요.');
                 return;
             }
             
-            const think = document.getElementById('thinkText').value.trim();
-            const because = document.getElementById('becauseText').value.trim();
-            const wonder = document.getElementById('wonderText').value.trim();
+            // 기존 탐구 제거
+            savedExplorations = savedExplorations.filter(exp => exp.viewpoint.name !== viewpoint.name);
             
-            if (!think && !because && !wonder) {
-                alert('최소 하나 이상의 탐구 내용을 입력해주세요.');
-                return;
-            }
-            
-            // 선택된 관점의 색상 찾기
-            const existingViewpoint = viewpoints.find(vp => vp.name === customViewpoint);
-            const viewpointColor = existingViewpoint ? existingViewpoint.color : '#9ca3af';
-            
-            const exploration = {
-                viewpoint: {
-                    name: customViewpoint,
-                    color: viewpointColor
-                },
+            // 새 탐구 추가
+            savedExplorations.push({
+                viewpoint: { ...viewpoint },
                 think,
-                because,
-                wonder,
-                timestamp: new Date().toLocaleString('ko-KR')
-            };
+                reason,
+                question,
+                timestamp: new Date()
+            });
             
-            // 같은 관점의 기존 탐구 업데이트 또는 추가
-            const existingIndex = savedExplorations.findIndex(exp => 
-                exp.viewpoint.name === exploration.viewpoint.name
-            );
-            
-            if (existingIndex !== -1) {
-                savedExplorations[existingIndex] = exploration;
-            } else {
-                savedExplorations.push(exploration);
-            }
-            
-            updateExplorationList();
-            saveData();
-            
-            // 패널 숨기기
-            document.getElementById('explorationPanel').classList.add('hidden');
-            alert('탐구 내용이 저장되었습니다!');
+            closeExplorationPanel();
+            updateUI();
+            showToast(`${viewpoint.name} 관점의 탐구가 저장되었습니다.`);
         }
 
-        // 탐구 기록 업데이트
+        // 탐구 패널 닫기
+        function closeExplorationPanel() {
+            document.getElementById('explorationPanel').classList.add('hidden');
+            currentViewpointIndex = null;
+        }
+
+        // 탐구 목록 업데이트
         function updateExplorationList() {
             const container = document.getElementById('savedExplorations');
             const list = document.getElementById('explorationList');
+            const sortOrder = document.getElementById('sortOrder')?.value || 'recent';
             
             if (savedExplorations.length === 0) {
                 container.classList.add('hidden');
@@ -584,87 +926,198 @@
             
             container.classList.remove('hidden');
             
-            list.innerHTML = savedExplorations.map((exp, index) => `
-                <div class="p-4 rounded-lg border bg-white" style="border-left: 5px solid ${exp.viewpoint.color};">
-                    <div class="flex justify-between items-center mb-2">
-                        <h4 class="font-bold text-lg" style="color: ${exp.viewpoint.color};">${exp.viewpoint.name}의 관점</h4>
-                        <button onclick="removeExploration(${index})" class="text-gray-400 hover:text-red-500 text-lg font-bold">×</button>
+            // 정렬
+            let sorted = [...savedExplorations];
+            if (sortOrder === 'viewpoint') {
+                sorted.sort((a, b) => a.viewpoint.name.localeCompare(b.viewpoint.name));
+            } else {
+                sorted.sort((a, b) => b.timestamp - a.timestamp);
+            }
+            
+            list.innerHTML = sorted.map(exp => `
+                <div class="panel p-4 hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-bold text-gray-800 flex items-center">
+                            <span class="inline-block w-4 h-4 rounded-full mr-2" style="background: ${exp.viewpoint.color}"></span>
+                            ${exp.viewpoint.name}의 관점
+                        </h4>
+                        <div class="flex gap-2">
+                            <button onclick="editExploration('${exp.viewpoint.name}')" 
+                                    class="text-blue-500 hover:text-blue-700 text-sm">
+                                ✏️ 수정
+                            </button>
+                            <button onclick="deleteExploration('${exp.viewpoint.name}')" 
+                                    class="text-red-500 hover:text-red-700 text-sm">
+                                🗑️ 삭제
+                            </button>
+                        </div>
                     </div>
-                    ${exp.think ? `<p class="text-sm text-gray-700 mb-2"><strong class="text-purple-600">생각:</strong> ${exp.think}</p>` : ''}
-                    ${exp.because ? `<p class="text-sm text-gray-700 mb-2"><strong class="text-orange-600">이유:</strong> ${exp.because}</p>` : ''}
-                    ${exp.wonder ? `<p class="text-sm text-gray-700"><strong class="text-cyan-600">궁금한 점:</strong> ${exp.wonder}</p>` : ''}
-                    <p class="text-xs text-gray-500 mt-2">${exp.timestamp}</p>
+                    <div class="space-y-2 text-sm">
+                        <div>
+                            <span class="font-medium text-gray-600">생각:</span>
+                            <p class="text-gray-800 mt-1">${exp.think}</p>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-600">이유:</span>
+                            <p class="text-gray-800 mt-1">${exp.reason}</p>
+                        </div>
+                        <div>
+                            <span class="font-medium text-gray-600">궁금한 점:</span>
+                            <p class="text-gray-800 mt-1">${exp.question}</p>
+                        </div>
+                    </div>
                 </div>
             `).join('');
         }
-        
-        // 탐구 기록 삭제
-        function removeExploration(index) {
-            savedExplorations.splice(index, 1);
-            updateUI();
+
+        // 탐구 수정
+        function editExploration(viewpointName) {
+            const index = viewpoints.findIndex(vp => vp.name === viewpointName);
+            if (index !== -1) {
+                currentViewpointIndex = index;
+                showExplorationPanel();
+            }
+        }
+
+        // 탐구 삭제
+        function deleteExploration(viewpointName) {
+            if (confirm(`'${viewpointName}' 관점의 탐구를 삭제하시겠습니까?`)) {
+                savedExplorations = savedExplorations.filter(exp => exp.viewpoint.name !== viewpointName);
+                updateUI();
+                showToast('탐구가 삭제되었습니다.');
+            }
+        }
+
+        // 결과 저장 - 프린트 템플릿만 캡처하도록 수정
+        function saveResult() {
+            if (savedExplorations.length === 0) {
+                showToast('저장할 탐구 기록이 없습니다.');
+                return;
+            }
+            
+            // 프린트 템플릿 데이터 업데이트
+            document.getElementById('printClass').textContent = document.getElementById('studentClass').value || '미입력';
+            document.getElementById('printName').textContent = document.getElementById('studentName').value || '미입력';
+            document.getElementById('printTopic').textContent = document.getElementById('mainTopic').value || '미입력';
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString('ko-KR');
+            document.getElementById('printTotalViewpoints').textContent = viewpoints.length;
+            document.getElementById('printCompletedCount').textContent = savedExplorations.length;
+            
+            // 탐구 기록 추가
+            const explorationsHtml = savedExplorations.map(exp => `
+                <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
+                    <h3 style="font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 12px; display: flex; align-items: center;">
+                        <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; background: ${exp.viewpoint.color};"></span>
+                        ${exp.viewpoint.name}의 관점
+                    </h3>
+                    <div style="space-y: 12px;">
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; color: #4b5563; margin-bottom: 4px;">💭 생각:</div>
+                            <div style="color: #1f2937; line-height: 1.6;">${exp.think}</div>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-weight: 600; color: #4b5563; margin-bottom: 4px;">💡 이유:</div>
+                            <div style="color: #1f2937; line-height: 1.6;">${exp.reason}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: #4b5563; margin-bottom: 4px;">❓ 궁금한 점:</div>
+                            <div style="color: #1f2937; line-height: 1.6;">${exp.question}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('printExplorations').innerHTML = explorationsHtml;
+            
+            // 프린트 템플릿을 임시로 body에 추가
+            const printTemplate = document.getElementById('printTemplate');
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '0';
+            tempDiv.style.left = '0';
+            tempDiv.style.width = '1200px';
+            tempDiv.style.background = 'white';
+            tempDiv.style.zIndex = '10000';
+            tempDiv.innerHTML = printTemplate.innerHTML;
+            document.body.appendChild(tempDiv);
+            
+            // 잠시 대기 후 캡처
+            setTimeout(() => {
+                html2canvas(tempDiv, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    width: 1200,
+                    windowWidth: 1200,
+                    windowHeight: tempDiv.scrollHeight,
+                    onclone: (clonedDoc) => {
+                        // 클론된 문서에서 스타일 적용 확인
+                        const clonedElement = clonedDoc.body.querySelector('div');
+                        if (clonedElement) {
+                            clonedElement.style.width = '1200px';
+                            clonedElement.style.background = 'white';
+                        }
+                    }
+                }).then(canvas => {
+                    // 이미지 다운로드
+                    const link = document.createElement('a');
+                    const studentName = document.getElementById('studentName').value || '학생';
+                    const topic = document.getElementById('mainTopic').value || '주제';
+                    const date = new Date().toISOString().split('T')[0];
+                    
+                    link.download = `관점의원_${studentName}_${topic}_${date}.png`;
+                    link.href = canvas.toDataURL();
+                    link.click();
+                    
+                    // 임시 div 제거
+                    document.body.removeChild(tempDiv);
+                    
+                    showToast('탐구 결과가 이미지로 저장되었습니다.');
+                }).catch(error => {
+                    console.error('캡처 오류:', error);
+                    document.body.removeChild(tempDiv);
+                    showToast('이미지 저장 중 오류가 발생했습니다.');
+                });
+            }, 300);
+        }
+
+        // 인쇄
+        function printExplorations() {
+            saveResult();
+        }
+
+        // 공유 링크
+        function shareLink() {
+            const url = window.location.href;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('링크가 클립보드에 복사되었습니다.');
+            });
+        }
+
+        // 도움말
+        function showHelp() {
+            document.getElementById('helpModal').classList.remove('hidden');
         }
         
-        // 결과 저장
-        async function saveResult() {
-            const studentClass = document.getElementById('studentClass').value.trim();
-            const studentName = document.getElementById('studentName').value.trim();
-            const mainTopic = document.getElementById('mainTopic').value.trim();
-            
-            if (!studentClass || !studentName || !mainTopic) {
-                alert('학습 정보를 모두 입력해주세요.');
-                return;
-            }
-            
-            if (viewpoints.length === 0) {
-                alert('관점을 추가해주세요.');
-                return;
-            }
-            
-            // 버튼 숨기기
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach(btn => btn.style.display = 'none');
-            
-            try {
-                const canvas = await html2canvas(document.getElementById('captureArea'), {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: null,
-                    logging: false
-                });
-                
-                const link = document.createElement('a');
-                const date = new Date().toLocaleDateString('ko-KR').replace(/\./g, '');
-                link.download = `관점의원_${studentClass}_${studentName}_${date}.png`;
-                link.href = canvas.toDataURL();
-                link.click();
-            } finally {
-                // 버튼 다시 표시
-                buttons.forEach(btn => btn.style.display = '');
-            }
+        function closeHelp() {
+            document.getElementById('helpModal').classList.add('hidden');
         }
 
         // 전체 초기화
         function resetAll() {
-            if (confirm('모든 내용을 초기화하시겠습니까?\n저장되지 않은 내용은 사라집니다.')) {
-                // 데이터 초기화
+            if (confirm('모든 데이터가 삭제됩니다. 계속하시겠습니까?')) {
                 viewpoints = [];
                 savedExplorations = [];
                 currentViewpointIndex = null;
-                
-                // 입력 필드 초기화
-                ['studentClass', 'studentName', 'mainTopic', 'viewpointInput'].forEach(id => {
-                    document.getElementById(id).value = '';
-                });
-                
-                // UI 초기화
-                document.getElementById('explorationPanel').classList.add('hidden');
+                document.getElementById('studentClass').value = '';
+                document.getElementById('studentName').value = '';
+                document.getElementById('mainTopic').value = '';
                 updateUI();
-                
-                // 로컬 스토리지 초기화
                 localStorage.removeItem('circleOfViewpoints');
+                showToast('모든 데이터가 초기화되었습니다.');
             }
         }
-        
+
         // 데이터 저장
         function saveData() {
             const data = {
@@ -690,7 +1143,7 @@
                     savedExplorations = data.savedExplorations || [];
                     updateUI();
                 } catch (e) {
-                    console.error('데이터 로드 실패:', e);
+                    console.error('Failed to load saved data:', e);
                 }
             }
         }
