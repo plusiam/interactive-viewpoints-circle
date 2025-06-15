@@ -4,6 +4,8 @@
 
 [🌐 Live Demo](https://plusiam.github.io/interactive-viewpoints-circle/)
 
+> 🧠 이 도구는 **[생각이 보이는 교실 - 사고가시화 전략 허브](https://plusiam.github.io/edu-thinking-toolkit/)** 프로젝트의 일부입니다. 더 많은 사고가시화 도구를 만나보세요!
+
 ## 📖 소개
 
 관점의 원(Circle of Viewpoints)은 학생들이 하나의 주제에 대해 다양한 관점에서 생각해보고 탐구할 수 있도록 돕는 교육 도구입니다. 이 프로젝트는 하버드대학교 프로젝트 제로의 사고 루틴을 인터랙티브한 웹 애플리케이션으로 구현했습니다.
@@ -79,6 +81,17 @@
 - **창의적 글쓰기**: 다양한 시각에서 이야기 구성
 - **프로젝트 학습**: 주제 탐구의 시작점으로 활용
 
+## 🧠 관련 프로젝트
+
+이 도구는 **[생각이 보이는 교실](https://plusiam.github.io/edu-thinking-toolkit/)** 프로젝트의 일부입니다.
+
+### 함께 사용하면 좋은 도구들:
+- 📊 [프레이어 모델](https://plusiam.github.io/frayer-model-worksheet/) - 개념의 깊이 있는 이해
+- 🌉 [3-2-1 브릿지](https://plusiam.github.io/321-bridge-worksheet/) - 학습 전후 사고 변화 추적
+- 🔍 [See-Think-Wonder](https://plusiam.github.io/see-think-wonder-worksheet/) - 관찰과 탐구력 향상
+- 🎭 [Step-Inside](https://plusiam.github.io/step-inside-worksheet/) - 공감 능력 개발
+- 🎯 [ORID 성찰 도구](https://plusiam.github.io/orid-reflection-tool/) - 체계적인 성찰
+
 ## 📱 브라우저 지원
 
 - Chrome (권장)
@@ -91,6 +104,21 @@
 
 이 프로젝트는 오픈소스입니다. 개선 사항이나 버그를 발견하시면 이슈를 등록하거나 풀 리퀘스트를 보내주세요.
 
+### 개발 환경 설정
+```bash
+# 저장소 클론
+git clone https://github.com/plusiam/interactive-viewpoints-circle.git
+
+# 디렉토리 이동
+cd interactive-viewpoints-circle
+
+# 로컬 서버 실행 (Python 3)
+python -m http.server 8000
+
+# 브라우저에서 접속
+# http://localhost:8000
+```
+
 ## 📄 라이선스
 
 MIT License
@@ -99,6 +127,15 @@ MIT License
 
 - 하버드대학교 프로젝트 제로(Project Zero) - 보이는 사고(Visible Thinking) 루틴 제공
 - 교육 현장에서 이 도구를 활용해주시는 모든 선생님들께 감사드립니다
+
+## 📞 문의 및 제안
+
+- **개발자**: 룰루랄라 한기쌤
+- **Facebook**: [@playrurulala](https://www.facebook.com/playrurulala)
+- **GitHub**: [@plusiam](https://github.com/plusiam)
+- **프로젝트 홈**: [생각이 보이는 교실](https://plusiam.github.io/edu-thinking-toolkit/)
+
+새로운 기능이나 개선 사항에 대한 제안을 언제든 환영합니다!
 
 ---
 
